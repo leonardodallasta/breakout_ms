@@ -1,7 +1,14 @@
+const key_code_right_arrow = 39;
+const key_code_left_arrow = 37;
+
 class Controls {
     constructor(game) {
-        console.log(document.createElement("div"));
         this.game = game;
+
+        this.boundKeyDownHandler = this.keyDownHandler.bind(this);
+        this.boundKeyUpHandler = this.keyUpHandler.bind(this);
+        this.boundMouseMoveHandler = this.mouseMoveHandler.bind(this);
+
         this.dialogBox = document.createElement("div");
         this.dialogBox.textContent = "Choose Controls";
         this.dialogBox.classList.add("no-close");
@@ -23,39 +30,43 @@ class Controls {
     showDialog() {
         this.dialogBox.style.display = "block";
     }
-
+   
     enableKeyboardControls() {
-        document.addEventListener("keydown", this.keyDownHandler.bind(this), false);
-        document.addEventListener("keyup", this.keyUpHandler.bind(this), false);
+        document.removeEventListener("mousemove", this.boundMouseMoveHandler, false);
+        
+        document.addEventListener("keydown", this.boundKeyDownHandler, false);
+        document.addEventListener("keyup", this.boundKeyUpHandler, false);
+        
         this.dialogBox.style.display = "none";
         this.game.draw();
     }
 
     enableMouseControls() {
-        document.addEventListener("mousemove", this.mouseMoveHandler.bind(this), false);
-        document.removeEventListener("keydown", this.removeKeyboard, false);
-        document.removeEventListener("keyup", this.removeKeyup, false);
+        document.removeEventListener("keydown", this.boundKeyDownHandler, false);
+        document.removeEventListener("keyup", this.boundKeyUpHandler, false);
+
+        document.addEventListener("mousemove", this.boundMouseMoveHandler, false);
+        
         this.dialogBox.style.display = "none";
         this.game.draw();
     }
 
     keyDownHandler(e) {
-        if (e.keyCode === 39) {
+        if (e.keyCode === key_code_right_arrow) {
             this.game.rightPressed = true;
-        } else if (e.keyCode === 37) {
+        } else if (e.keyCode === key_code_left_arrow) {
             this.game.leftPressed = true;
         } else if (e.key === "Escape") {
             alert("PAUSED!");
-        }
-        else if (e.key === "p" || e.key === "P") {
+        } else if (e.key === "p" || e.key === "P") {
             this.game.togglePause();
         }
     }
 
     keyUpHandler(e) {
-        if (e.keyCode === 39) {
+        if (e.keyCode === key_code_right_arrow) {
             this.game.rightPressed = false;
-        } else if (e.keyCode === 37) {
+        } else if (e.keyCode === key_code_left_arrow) {
             this.game.leftPressed = false;
         }
     }

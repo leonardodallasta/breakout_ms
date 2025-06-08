@@ -1,3 +1,5 @@
+const paddle_move_speed = 7;
+
 class Game {
     constructor(canvas, ctx) {
         this.canvas = canvas;
@@ -7,8 +9,8 @@ class Game {
         this.level = 1;
         this.x = this.canvas.width / 2;
         this.y = this.canvas.height - 30;
-        this.dx = 5;
-        this.dy = -5;
+        this.dx = 3;
+        this.dy = -3;
         this.paddleHeight = 10;
         this.paddleWidth = 100;
         this.paddleX = (this.canvas.width - this.paddleWidth) / 2;
@@ -47,11 +49,6 @@ class Game {
         for (let c = 0; c < this.brickSettings.columnCount; c++) {
             this.bricks[c][Math.floor(Math.random() * 5)].isBonus = 1;
         }
-    }
-
-    setControls(rightPressed, leftPressed) {
-        this.rightPressed = rightPressed;
-        this.leftPressed = leftPressed;
     }
 
     startGame() {
@@ -115,58 +112,77 @@ class Game {
     }
 
     moveBall() {
+        this.handleWallCollision();
+        this.handleBottomCollision();
+        this.paddleMovement();
+        this.updateBallPosition();
+    }
+    
+    handleWallCollision() {
         if (this.x + this.dx > this.canvas.width - this.ballRadius || this.x + this.dx < this.ballRadius) {
             this.dx = -this.dx;
         }
         if (this.y + this.dy < this.ballRadius) {
             this.dy = -this.dy;
-        } else if (this.y + this.dy > this.canvas.height - this.ballRadius) {
+        }
+    }
+    
+    handleBottomCollision() {
+        if (this.y + this.dy > this.canvas.height - this.ballRadius) {
             if (this.x > this.paddleX && this.x < this.paddleX + this.paddleWidth) {
-                this.dy = -this.dy;
-                
-                const relativePosition = (this.x - this.paddleX) / this.paddleWidth;
-                
-                let angleChange = (relativePosition - 0.5) * Math.PI / 3; 
-                
-                const speed = Math.sqrt(this.dx * this.dx + this.dy * this.dy) 
-                this.dx = Math.sin(angleChange) * speed ;
-                this.dy = -Math.cos(angleChange) * speed;
+                this.bounceBallOffPaddle();
             } else {
-                this.lives--;
-                if (!this.lives) {
-                    this.loseSound.play();
-                    setTimeout(() => {
-                        alert("GAME OVER");
-                        this.dx = 5
-                        this.dy = -5
-                        this.score = 0
-                        this.lives = 3
-                        this.level = 1
-                        this.paddleWidth = 100
-                        this.restart();
-                    }, 0);
-                    return;
-                } else {
-                    this.fallSound.play();
-                    this.x = this.canvas.width / 2;
-                    this.y = this.canvas.height - 30;
-                    this.paddleX = (this.canvas.width - this.paddleWidth) / 2;
-                }
+                this.handleLifeLoss();
             }
         }
+    }
     
-        this.paddleMovement();
+    bounceBallOffPaddle() {
+        this.dy = -this.dy;
+        const relativePosition = (this.x - this.paddleX) / this.paddleWidth;
+        let angleChange = (relativePosition - 0.5) * Math.PI / 3;
+        const speed = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
+        this.dx = Math.sin(angleChange) * speed;
+        this.dy = -Math.cos(angleChange) * speed;
+    }
+    
+    handleLifeLoss() {
+        this.lives--;
+        if (!this.lives) {
+            this.loseSound.play();
+            setTimeout(() => {
+                alert("GAME OVER");
+                this.dx = 5;
+                this.dy = -5;
+                this.score = 0;
+                this.lives = 3;
+                this.level = 1;
+                this.paddleWidth = 100;
+                this.restart();
+            }, 0);
+        } else {
+            this.fallSound.play();
+            this.resetBallPosition();
+        }
+    }
+    
+    resetBallPosition() {
+        this.x = this.canvas.width / 2;
+        this.y = this.canvas.height - 30;
+        this.paddleX = (this.canvas.width - this.paddleWidth) / 2;
+    }
+    
+    updateBallPosition() {
         this.x += this.dx;
         this.y += this.dy;
     }
     
-    
 
     paddleMovement() {
         if (this.rightPressed && this.paddleX < this.canvas.width - this.paddleWidth) {
-            this.paddleX += 7;
+            this.paddleX += paddle_move_speed;
         } else if (this.leftPressed && this.paddleX > 0) {
-            this.paddleX -= 7;
+            this.paddleX -= paddle_move_speed;
         }
     }
 
