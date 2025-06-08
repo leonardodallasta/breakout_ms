@@ -1,6 +1,5 @@
 class Controls {
     constructor(game) {
-        console.log(document.createElement("div"));
         this.game = game;
         this.dialogBox = document.createElement("div");
         this.dialogBox.textContent = "Choose Controls";
@@ -18,6 +17,8 @@ class Controls {
         mouseButton.textContent = "Mouse";
         mouseButton.addEventListener("click", () => this.enableMouseControls());
         this.dialogBox.appendChild(mouseButton);
+
+        this.createPauseMenu();
     }
 
     showDialog() {
@@ -40,23 +41,31 @@ class Controls {
     }
 
     keyDownHandler(e) {
-        if (e.keyCode === 39) {
-            this.game.rightPressed = true;
-        } else if (e.keyCode === 37) {
-            this.game.leftPressed = true;
-        } else if (e.key === "Escape") {
-            alert("PAUSED!");
-        }
-        else if (e.key === "p" || e.key === "P") {
-            this.game.togglePause();
+        switch (e.key) {
+            case "ArrowRight":
+            case "Right":
+                this.game.rightPressed = true;
+                break;
+            case "ArrowLeft":
+            case "Left":
+                this.game.leftPressed = true;
+                break;
+            case "Escape":
+                this.togglePauseMenu();
+                break;
         }
     }
 
     keyUpHandler(e) {
-        if (e.keyCode === 39) {
-            this.game.rightPressed = false;
-        } else if (e.keyCode === 37) {
-            this.game.leftPressed = false;
+        switch (e.key) {
+            case "ArrowRight":
+            case "Right":
+                this.game.rightPressed = false;
+                break;
+            case "ArrowLeft":
+            case "Left":
+                this.game.leftPressed = false;
+                break;
         }
     }
 
@@ -66,4 +75,71 @@ class Controls {
             this.game.paddleX = relativeX - this.game.paddleWidth / 2;
         }
     }
+
+    createPauseMenu() {
+        this.pauseMenu = document.createElement("div");
+        this.pauseMenu.style.position = "absolute";
+        this.pauseMenu.style.top = "50%";
+        this.pauseMenu.style.left = "50%";
+        this.pauseMenu.style.transform = "translate(-50%, -50%)";
+        this.pauseMenu.style.padding = "30px";
+        this.pauseMenu.style.backgroundColor = "#fff";
+        this.pauseMenu.style.border = "2px solid #000";
+        this.pauseMenu.style.display = "none";
+        this.pauseMenu.style.zIndex = "1000";
+        this.pauseMenu.style.textAlign = "center";
+        this.pauseMenu.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
+        document.body.appendChild(this.pauseMenu);
+
+        const title = document.createElement("h2");
+        title.textContent = "Game paused";
+        this.pauseMenu.appendChild(title);
+
+        const resumeButton = document.createElement("button");
+        resumeButton.textContent = "Continue";
+        resumeButton.style.margin = "10px";
+        resumeButton.addEventListener("click", () => {
+            this.hidePauseMenu();
+            this.game.togglePause();
+        });
+        this.pauseMenu.appendChild(resumeButton);
+
+        this.soundButton = document.createElement("button");
+        this.soundButton.style.margin = "10px";
+        this.soundButton.addEventListener("click", () => {
+            this.game.toggleSound();
+            this.updateSoundButton();
+        });
+        this.pauseMenu.appendChild(this.soundButton);
+
+        this.updateSoundButton();
+    }
+
+    togglePauseMenu() {
+        if (this.pauseMenu.style.display === "none") {
+            this.showPauseMenu();
+            if (!this.game.isPaused) this.game.togglePause();
+        } else {
+            this.hidePauseMenu();
+            if (this.game.isPaused) this.game.togglePause();
+        }
+    }
+
+    showPauseMenu() {
+        this.updateSoundButton();
+        this.pauseMenu.style.display = "block";
+    }
+
+    hidePauseMenu() {
+        this.pauseMenu.style.display = "none";
+    }
+
+    updateSoundButton() {
+        if (this.game.soundEnabled) {
+            this.soundButton.textContent = "Mute sound";
+        } else {
+            this.soundButton.textContent = "Unmute sound";
+        }
+    }
+
 }
