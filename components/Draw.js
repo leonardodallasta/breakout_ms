@@ -7,6 +7,7 @@ class Draw {
         this.defaultBorderWidth = 2;
         this.defaultTextColor = "#0095DD";
         this.defaultFont = "16px Arial";
+        this.buttonFont = "bold 18px Arial";
     }
 
     clearCanvas() {
@@ -43,6 +44,7 @@ class Draw {
         const brickPadding = brickSettings.padding;
         const brickOffsetTop = brickSettings.offsetTop;
         const brickOffsetLeft = brickSettings.offsetLeft;
+
         for (let c = 0; c < brickColumnCount; c++) {
             for (let r = 0; r < brickRowCount; r++) {
                 if (bricks[c][r].status === 1) {
@@ -50,12 +52,10 @@ class Draw {
                     const brickY = c * (brickHeight + brickPadding) + brickOffsetTop;
                     bricks[c][r].x = brickX;
                     bricks[c][r].y = brickY;
+
                     this.ctx.beginPath();
                     this.ctx.rect(brickX, brickY, brickWidth, brickHeight);
-                    if (bricks[c][r].isBonus === 0)
-                        this.ctx.fillStyle = this.defaultFillColor;
-                    else
-                        this.ctx.fillStyle = "#FF8C00"; // Cor alternativa para bônus
+                    this.ctx.fillStyle = bricks[c][r].isBonus === 0 ? this.defaultFillColor : "#FF8C00";
                     this.ctx.fill();
                     this.ctx.strokeStyle = this.defaultBorderColor;
                     this.ctx.lineWidth = this.defaultBorderWidth;
@@ -70,5 +70,26 @@ class Draw {
         this.ctx.font = this.defaultFont;
         this.ctx.fillStyle = this.defaultTextColor;
         this.ctx.fillText(text, x, y);
+    }
+
+    drawMenu(soundOn) {
+        const width = 300;
+        const height = 180;
+        const x = (this.canvas.width - width) / 2;
+        const y = (this.canvas.height - height) / 2;
+
+        this.ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+        this.ctx.fillRect(x, y, width, height);
+
+        this.ctx.strokeStyle = "#ffffff";
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(x, y, width, height);
+
+        this.ctx.fillStyle = "#ffffff";
+        this.ctx.font = this.buttonFont;
+        this.ctx.fillText("Game Paused", x + 75, y + 40);
+        this.ctx.fillText("Press ESC to Resume", x + 45, y + 80);
+        this.ctx.fillText(`Sound: ${soundOn ? "On" : "Off"}`, x + 90, y + 130);
+        this.ctx.font = this.defaultFont;
     }
 }
