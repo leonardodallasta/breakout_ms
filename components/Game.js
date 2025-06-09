@@ -23,7 +23,6 @@ class Game {
         this.fallSound = new Audio("assets/Audio/fall.mp3");
 
         this.soundEnabled = true;
-
         this.initializeGameSettings();
         this.bricks = [];
         this.createBricks();
@@ -46,7 +45,6 @@ class Game {
         this.highscore = 0;
         this.brickHit = 0;
         this.isPaused = false;
-        this.showMenu = false;
     }
 
     getBrickPosition(c, r) {
@@ -89,12 +87,6 @@ class Game {
     }
 
     draw() {
-        if (this.showMenu) {
-            this.drawFunctions.drawMenu(this.soundEnabled);
-            requestAnimationFrame(() => this.draw());
-            return;
-        }
-
         if (this.isPaused) {
             this.drawFunctions.drawText("Game Paused", this.canvas.width / 2 - 50, this.canvas.height / 2);
             return;
@@ -154,6 +146,14 @@ class Game {
         if (!this.soundEnabled) return;
         sound.currentTime = 0;
         sound.play();
+    }
+
+    toggleSound() {
+        this.soundEnabled = !this.soundEnabled;
+    }
+
+    setSoundEnabled(enabled) {
+        this.soundEnabled = enabled;
     }
 
     moveBall() {
@@ -232,25 +232,12 @@ class Game {
         this.paddleX = (this.canvas.width - this.paddleWidth) / 2;
         this.rightPressed = false;
         this.leftPressed = false;
-        this.showMenu = false;
-        this.isPaused = false;
     }
 
     togglePause() {
         this.isPaused = !this.isPaused;
-        if (!this.isPaused && !this.showMenu) {
+        if (!this.isPaused) {
             this.draw();
         }
-    }
-
-    toggleMenu() {
-        this.showMenu = !this.showMenu;
-        if (!this.showMenu) {
-            this.draw();
-        }
-    }
-
-    toggleSound() {
-        this.soundEnabled = !this.soundEnabled;
     }
 }

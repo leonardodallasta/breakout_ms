@@ -1,6 +1,14 @@
+const key_code_right_arrow = 39;
+const key_code_left_arrow = 37;
+
 class Controls {
     constructor(game) {
         this.game = game;
+
+        this.boundKeyDownHandler = this.keyDownHandler.bind(this);
+        this.boundKeyUpHandler = this.keyUpHandler.bind(this);
+        this.boundMouseMoveHandler = this.mouseMoveHandler.bind(this);
+
         this.dialogBox = document.createElement("div");
         this.dialogBox.textContent = "Choose Controls";
         this.dialogBox.classList.add("no-close");
@@ -24,23 +32,28 @@ class Controls {
     showDialog() {
         this.dialogBox.style.display = "block";
     }
-
+   
     enableKeyboardControls() {
-        document.addEventListener("keydown", this.keyDownHandler.bind(this), false);
-        document.addEventListener("keyup", this.keyUpHandler.bind(this), false);
+        document.removeEventListener("mousemove", this.boundMouseMoveHandler, false);
+        
+        document.addEventListener("keydown", this.boundKeyDownHandler, false);
+        document.addEventListener("keyup", this.boundKeyUpHandler, false);
+        
         this.dialogBox.style.display = "none";
         this.game.draw();
     }
 
     enableMouseControls() {
-        document.addEventListener("mousemove", this.mouseMoveHandler.bind(this), false);
-        document.removeEventListener("keydown", this.removeKeyboard, false);
-        document.removeEventListener("keyup", this.removeKeyup, false);
+        document.removeEventListener("keydown", this.boundKeyDownHandler, false);
+        document.removeEventListener("keyup", this.boundKeyUpHandler, false);
+
+        document.addEventListener("mousemove", this.boundMouseMoveHandler, false);
+        
         this.dialogBox.style.display = "none";
         this.game.draw();
     }
 
-    keyDownHandler(e) {
+   keyDownHandler(e) {
         switch (e.key) {
             case "ArrowRight":
             case "Right":
@@ -51,10 +64,11 @@ class Controls {
                 this.game.leftPressed = true;
                 break;
             case "Escape":
-                this.togglePauseMenu();
+                 this.togglePauseMenu();
                 break;
         }
     }
+
 
     keyUpHandler(e) {
         switch (e.key) {
@@ -68,6 +82,7 @@ class Controls {
                 break;
         }
     }
+
 
     mouseMoveHandler(e) {
         const relativeX = e.clientX - this.game.canvas.offsetLeft;

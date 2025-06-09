@@ -72,7 +72,7 @@ class Draw {
         this.ctx.fillText(text, x, y);
     }
 
-    drawPauseMenu(soundOn) {
+    drawMenu(soundOn) {
         const width = 300;
         const height = 180;
         const x = (this.canvas.width - width) / 2;
