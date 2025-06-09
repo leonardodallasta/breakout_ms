@@ -4,6 +4,10 @@ class Game {
         this.ctx = ctx;
         this.drawFunctions = new Draw(this.ctx, this.canvas);
         this.powerUps = [];
+        this.paddleWidth = 100;
+        this.originalPaddleWidth = this.paddleWidth;
+        this.paddleResizeTimeout = null;
+
 
         this.DEFAULT_BRICK_ROWS = 5;
         this.DEFAULT_BRICK_COLUMNS = 2;
@@ -198,28 +202,43 @@ class Game {
         this.y += this.dy;
     }
 
-    handleBallBottomCollision() {
-        const ballHitsPaddle = this.x > this.paddleX && this.x < this.paddleX + this.paddleWidth;
+    resetBallPosition() {
+        this.x = this.canvas.width / 2;
+        this.y = this.canvas.height - 30;
+        this.dx = 5;
+        this.dy = -5;
+        this.paddleX = (this.canvas.width - this.paddleWidth) / 2;
+    }    
 
-        if (ballHitsPaddle) {
+    handleBallBottomCollision() {
+        if (this.paddleResizeTimeout) {
+            clearTimeout(this.paddleResizeTimeout);
+            this.paddleResizeTimeout = null;
+        }
+        this.paddleWidth = this.originalPaddleWidth;
+    
+        if (this.x > this.paddleX && this.x < this.paddleX + this.paddleWidth) {
             this.bounceBallOffPaddle();
         } else {
             this.lives--;
-            if (this.lives === 0) {
-                this.playSound(this.loseSound);
+            if (!this.lives) {
+                this.loseSound.play();
                 setTimeout(() => {
                     alert("GAME OVER");
-                    this.resetGameState();
+                    this.dx = 5;
+                    this.dy = -5;
+                    this.score = 0;
+                    this.lives = 3;
+                    this.level = 1;
+                    this.paddleWidth = this.originalPaddleWidth;
                     this.restart();
-                });
+                }, 0);
             } else {
-                this.playSound(this.fallSound);
-                this.x = this.canvas.width / 2;
-                this.y = this.canvas.height - 30;
-                this.paddleX = (this.canvas.width - this.paddleWidth) / 2;
+                this.fallSound.play();
+                this.resetBallPosition();
             }
         }
-    }
+    }    
 
     bounceBallOffPaddle() {
         this.dy = -this.dy;
@@ -241,6 +260,25 @@ class Game {
         this.paddleWidth = 100;
     }
 
+    applyPaddleSizePowerUp() {
+        this.paddleWidth += 30;
+    
+        if (this.paddleWidth > this.canvas.width * 0.9) {
+            this.paddleWidth = this.canvas.width * 0.9;
+        }
+    
+        if (this.paddleResizeTimeout) {
+            clearTimeout(this.paddleResizeTimeout);
+        }
+    
+        this.paddleResizeTimeout = setTimeout(() => {
+            this.paddleWidth = this.originalPaddleWidth;
+            console.log("Barra voltou ao tamanho original.");
+        }, 5000);
+    
+        console.log("Power-up coletado: paddleSize (barra aumentada por 5s)");
+    }    
+
     checkPowerUpCollision() {
         for (const powerUp of this.powerUps) {
             if (!powerUp.active) continue;
@@ -257,7 +295,9 @@ class Game {
                 this.powerUpSound.currentTime = 0;
                 this.powerUpSound.play();
     
-                console.log("Power-up coletado:", powerUp.type);
+                if (powerUp.type === "paddleSize") {
+                    this.applyPaddleSizePowerUp();
+                }
             }
         }
     }    
