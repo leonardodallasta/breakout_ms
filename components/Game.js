@@ -3,6 +3,7 @@ class Game {
         this.canvas = canvas;
         this.ctx = ctx;
         this.drawFunctions = new Draw(this.ctx, this.canvas);
+        this.powerUps = [];
 
         this.DEFAULT_BRICK_ROWS = 5;
         this.DEFAULT_BRICK_COLUMNS = 2;
@@ -21,6 +22,7 @@ class Game {
         this.loseSound = new Audio("assets/Audio/lose.mp3");
         this.winSound = new Audio("assets/Audio/win.mp3");
         this.fallSound = new Audio("assets/Audio/fall.mp3");
+        this.powerUpSound = new Audio("assets/Audio/powerup.mp3");
 
         this.soundEnabled = true;
         this.initializeGameSettings();
@@ -93,7 +95,9 @@ class Game {
         }
 
         this.drawScene();
+        this.drawPowerUps();
         this.collisionDetection();
+        this.checkPowerUpCollision();
         this.moveBall();
         requestAnimationFrame(() => this.draw());
     }
@@ -109,6 +113,19 @@ class Game {
         this.drawFunctions.drawText("Level: " + this.level, this.canvas.width - 65, 20);
     }
 
+    drawPowerUps() {
+        for (const powerUp of this.powerUps) {
+            powerUp.draw(this.ctx);
+            powerUp.move();
+
+            if (powerUp.y > this.canvas.height) {
+                powerUp.active = false;
+            }
+        }
+    
+        this.powerUps = this.powerUps.filter(p => p.active);
+    }    
+
     collisionDetection() {
         const totalBricks = this.brickSettings.rowCount * this.brickSettings.columnCount;
 
@@ -121,6 +138,14 @@ class Game {
                 this.playSound(this.hitSound);
                 this.dy = -this.dy;
                 b.status = 0;
+
+                if (b.isBonus === 1) {
+                    const types = ["paddleSize", "extraLife", "multiBall"];
+                    const randomType = types[Math.floor(Math.random() * types.length)];
+                    const powerUp = new PowerUp(this.x, this.y, randomType);
+
+                    this.powerUps.push(powerUp);
+                }                
 
                 this.score += b.isBonus ? 5 : 1;
                 if (this.score > this.highscore) this.highscore = this.score;
@@ -215,6 +240,27 @@ class Game {
         this.level = 1;
         this.paddleWidth = 100;
     }
+
+    checkPowerUpCollision() {
+        for (const powerUp of this.powerUps) {
+            if (!powerUp.active) continue;
+    
+            const powerUpBottom = powerUp.y + powerUp.radius;
+            const paddleTop = this.canvas.height - this.paddleHeight;
+    
+            if (
+                powerUpBottom >= paddleTop &&
+                powerUp.x > this.paddleX &&
+                powerUp.x < this.paddleX + this.paddleWidth
+            ) {
+                powerUp.active = false;
+                this.powerUpSound.currentTime = 0;
+                this.powerUpSound.play();
+    
+                console.log("Power-up coletado:", powerUp.type);
+            }
+        }
+    }    
 
     paddleMovement() {
         if (this.rightPressed && this.paddleX < this.canvas.width - this.paddleWidth) {
