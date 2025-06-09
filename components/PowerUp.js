@@ -3,10 +3,13 @@ class PowerUp {
         this.x = x;
         this.y = y;
         this.radius = 10;
+        this.width = 24;
+        this.height = 24;
         this.type = type;
         this.dy = 2;
         this.active = true;
     }
+
 
     draw(ctx) {
         if (!this.active) return;

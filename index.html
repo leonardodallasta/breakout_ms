@@ -6,7 +6,7 @@
     <link href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" rel="stylesheet" type="text/css" media="screen, projection" />
   </head>
   <body>
-    <canvas id="myCanvas" width="500" height="500" style="background: #eee;"></canvas>
+    <canvas id="myCanvas"></canvas>
   </body>
   <script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
   <script
@@ -22,13 +22,27 @@
   <script src="./components/Draw.js"></script>
   <script src="./components/Controls.js"></script>
   <script src="./components/Game.js"></script>
-  <script src="./components/PowerUp.js"></script>s
+  <script src="./components/PowerUp.js"></script>
   <script src="./renderer.js"></script>
   <script>if (window.module) module = window.module;</script>
 </html>
 
 <style>
   /* menu */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
 button {
   background-color: #4CAF50;
   border: none;

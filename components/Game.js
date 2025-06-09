@@ -1,3 +1,48 @@
+class Particle {
+    constructor(x, y, explosionType = 'random') {
+        this.x = x;
+        this.y = y;
+        this.size = Math.random() * 3 + 1;
+        this.speedX = (Math.random() - 0.5) * 4;
+        this.speedY = (Math.random() - 0.5) * 4;
+        this.alpha = 1;
+        this.decay = Math.random() * 0.02 + 0.01;
+
+        if (explosionType === 'bomb') {
+            const bombColors = [
+                'rgb(255, 69, 0)',
+                'rgb(255, 140, 0)',
+                'rgb(255, 215, 0)',
+                'rgb(105, 105, 105)',
+                'rgb(255, 255, 255)'
+            ];
+            this.color = bombColors[Math.floor(Math.random() * bombColors.length)];
+        } else {
+            this.color = `hsl(${Math.floor(Math.random() * 360)}, 100%, 50%)`;
+        }
+    }
+
+    update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        this.alpha -= this.decay;
+    }
+
+    isAlive() {
+        return this.alpha > 0;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
 class Game {
     constructor(canvas, ctx) {
         this.canvas = canvas;
@@ -7,7 +52,6 @@ class Game {
         this.paddleWidth = 100;
         this.originalPaddleWidth = this.paddleWidth;
         this.paddleResizeTimeout = null;
-
 
         this.DEFAULT_BRICK_ROWS = 5;
         this.DEFAULT_BRICK_COLUMNS = 2;
@@ -32,6 +76,7 @@ class Game {
         this.initializeGameSettings();
         this.bricks = [];
         this.createBricks();
+        this.particles = [];
     }
 
     initializeGameSettings() {
@@ -103,6 +148,9 @@ class Game {
         this.collisionDetection();
         this.checkPowerUpCollision();
         this.moveBall();
+        this.updateParticles();
+        this.drawParticles();
+
         requestAnimationFrame(() => this.draw());
     }
 
@@ -143,6 +191,14 @@ class Game {
                 this.dy = -this.dy;
                 b.status = 0;
 
+               const centerX = b.x + this.brickSettings.width / 2;
+               const centerY = b.y + this.brickSettings.height / 2;
+               const explosionType = Math.random() < 0.5 ? 'bomb' : 'random';
+               for (let i = 0; i < 20; i++) {
+                this.particles.push(new Particle(centerX, centerY, explosionType));
+               }
+
+
                 if (b.isBonus === 1) {
                     const types = ["paddleSize", "extraLife", "multiBall"];
                     const randomType = types[Math.floor(Math.random() * types.length)];
@@ -169,6 +225,15 @@ class Game {
                 }
             }
         }
+    }
+
+    updateParticles() {
+        this.particles.forEach(p => p.update());
+        this.particles = this.particles.filter(p => p.isAlive());
+    }
+
+    drawParticles() {
+        this.particles.forEach(p => p.draw(this.ctx));
     }
 
     playSound(sound) {
@@ -249,75 +314,56 @@ class Game {
         const speed = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
         this.dx = Math.sin(angleChange) * speed;
         this.dy = -Math.cos(angleChange) * speed;
+        this.playSound(this.hitSound);
     }
 
-    resetGameState() {
-        this.dx = 5;
-        this.dy = -5;
-        this.score = 0;
-        this.lives = 3;
-        this.level = 1;
-        this.paddleWidth = 100;
+    paddleMovement() {
+        if (this.rightPressed && this.paddleX < this.canvas.width - this.paddleWidth) {
+            this.paddleX += 10;
+        } else if (this.leftPressed && this.paddleX > 0) {
+            this.paddleX -= 10;
+        }
     }
-
-    applyPaddleSizePowerUp() {
-        this.paddleWidth += 30;
-    
-        if (this.paddleWidth > this.canvas.width * 0.9) {
-            this.paddleWidth = this.canvas.width * 0.9;
-        }
-    
-        if (this.paddleResizeTimeout) {
-            clearTimeout(this.paddleResizeTimeout);
-        }
-    
-        this.paddleResizeTimeout = setTimeout(() => {
-            this.paddleWidth = this.originalPaddleWidth;
-            console.log("Barra voltou ao tamanho original.");
-        }, 5000);
-    
-        console.log("Power-up coletado: paddleSize (barra aumentada por 5s)");
-    }    
 
     checkPowerUpCollision() {
         for (const powerUp of this.powerUps) {
-            if (!powerUp.active) continue;
-    
-            const powerUpBottom = powerUp.y + powerUp.radius;
-            const paddleTop = this.canvas.height - this.paddleHeight;
-    
             if (
-                powerUpBottom >= paddleTop &&
+                powerUp.y + powerUp.height > this.canvas.height - this.paddleHeight &&
                 powerUp.x > this.paddleX &&
                 powerUp.x < this.paddleX + this.paddleWidth
             ) {
                 powerUp.active = false;
-                this.powerUpSound.currentTime = 0;
-                this.powerUpSound.play();
-    
-                if (powerUp.type === "paddleSize") {
-                    this.applyPaddleSizePowerUp();
-                }
+                this.applyPowerUp(powerUp);
             }
         }
-    }    
+    }
 
-    paddleMovement() {
-        if (this.rightPressed && this.paddleX < this.canvas.width - this.paddleWidth) {
-            this.paddleX += 7;
-        } else if (this.leftPressed && this.paddleX > 0) {
-            this.paddleX -= 7;
+    applyPowerUp(powerUp) {
+        this.playSound(this.powerUpSound);
+
+        switch (powerUp.type) {
+            case "paddleSize":
+                this.paddleWidth += 40;
+                clearTimeout(this.paddleResizeTimeout);
+                this.paddleResizeTimeout = setTimeout(() => {
+                    this.paddleWidth = this.originalPaddleWidth;
+                }, 10000);
+                break;
+            case "extraLife":
+                this.lives++;
+                break;
+            case "multiBall":
+                break;
+            default:
+                break;
         }
     }
 
     restart() {
+        this.initializeGameSettings();
         this.createBricks();
-        this.x = this.canvas.width / 2;
-        this.y = this.canvas.height - 30;
-        this.brickHit = 0;
-        this.paddleX = (this.canvas.width - this.paddleWidth) / 2;
-        this.rightPressed = false;
-        this.leftPressed = false;
+        this.particles = [];
+        this.powerUps = [];
     }
 
     togglePause() {
