@@ -1,0 +1,9 @@
+{
+  "plugins": ["sonarjs"],
+  "extends": ["plugin:sonarjs/recommended", "eslint:recommended"],
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2021": true
+  }
+}
