@@ -96,6 +96,7 @@ class Game {
         this.highscore = 0;
         this.brickHit = 0;
         this.isPaused = false;
+        this.isPaddleExtended = false;
     }
 
     getBrickPosition(c, r) {
@@ -148,6 +149,7 @@ class Game {
         this.collisionDetection();
         this.checkPowerUpCollision();
         this.moveBall();
+        this.moveExtraBalls();
         this.updateParticles();
         this.drawParticles();
 
@@ -176,6 +178,64 @@ class Game {
         }
     
         this.powerUps = this.powerUps.filter(p => p.active);
+    }    
+
+    moveExtraBalls() {
+        if (!this.extraBalls) return;
+    
+        for (const ball of this.extraBalls) {
+            if (!ball.active) continue;
+    
+            if (ball.x + ball.dx > this.canvas.width - ball.radius || ball.x + ball.dx < ball.radius) {
+                ball.dx = -ball.dx;
+            }
+    
+            if (ball.y + ball.dy < ball.radius) {
+                ball.dy = -ball.dy;
+            } else if (ball.y + ball.dy > this.canvas.height - ball.radius) {
+                if (ball.x > this.paddleX && ball.x < this.paddleX + this.paddleWidth) {
+                    ball.dy = -ball.dy;
+                } else {
+                    ball.active = false;
+                    continue;
+                }
+            }
+
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+  
+            this.drawFunctions.drawBall(ball.x, ball.y, ball.radius);
+   
+            for (let c = 0; c < this.brickSettings.columnCount; c++) {
+                for (let r = 0; r < this.brickSettings.rowCount; r++) {
+                    const b = this.bricks[c][r];
+                    if (b.status !== 1) continue;
+                    if (
+                        ball.x > b.x &&
+                        ball.x < b.x + this.brickSettings.width &&
+                        ball.y > b.y &&
+                        ball.y < b.y + this.brickSettings.height
+                    ) {
+                        b.status = 0;
+                        this.brickHit++;
+                        this.playSound(this.hitSound);
+                        ball.dy = -ball.dy;
+    
+                        if (b.isBonus === 1) {
+                            const types = ["paddleSize", "extraLife", "multiBall"];
+                            const randomType = types[Math.floor(Math.random() * types.length)];
+                            const powerUp = new PowerUp(ball.x, ball.y, randomType);
+                            this.powerUps.push(powerUp);
+                        }
+    
+                        this.score += b.isBonus ? 5 : 1;
+                        if (this.score > this.highscore) this.highscore = this.score;
+                    }
+                }
+            }
+        }
+    
+        this.extraBalls = this.extraBalls.filter(b => b.active);
     }    
 
     collisionDetection() {
@@ -276,12 +336,10 @@ class Game {
     }    
 
     handleBallBottomCollision() {
-        if (this.paddleResizeTimeout) {
-            clearTimeout(this.paddleResizeTimeout);
-            this.paddleResizeTimeout = null;
+        if (!this.isPaddleExtended) {
+            this.paddleWidth = this.originalPaddleWidth;
         }
-        this.paddleWidth = this.originalPaddleWidth;
-    
+        
         if (this.x > this.paddleX && this.x < this.paddleX + this.paddleWidth) {
             this.bounceBallOffPaddle();
         } else {
@@ -325,6 +383,28 @@ class Game {
         }
     }
 
+    applyPaddleSizePowerUp() {
+        this.paddleWidth += 30;
+    
+        if (this.paddleWidth > this.canvas.width * 0.9) {
+            this.paddleWidth = this.canvas.width * 0.9;
+        }
+    
+        this.isPaddleExtended = true;
+    
+        if (this.paddleResizeTimeout) {
+            clearTimeout(this.paddleResizeTimeout);
+        }
+    
+        this.paddleResizeTimeout = setTimeout(() => {
+            this.paddleWidth = this.originalPaddleWidth;
+            this.isPaddleExtended = false;
+            console.log("Barra voltou ao tamanho original.");
+        }, 5000);
+    
+        console.log("Power-up coletado: paddleSize (barra aumentada por 5s)");
+    }
+    
     checkPowerUpCollision() {
         for (const powerUp of this.powerUps) {
             if (
@@ -333,8 +413,48 @@ class Game {
                 powerUp.x < this.paddleX + this.paddleWidth
             ) {
                 powerUp.active = false;
+                this.powerUpSound.currentTime = 0;
+                this.powerUpSound.play();
+                switch (powerUp.type) {
+                    case "paddleSize":
+                        this.applyPaddleSizePowerUp();
+                        break;
+                    case "extraLife":
+                        this.lives++;
+                        console.log("Power-up coletado: +1 vida!");
+                        break;
+                    case "multiBall":
+                        this.spawnExtraBall();
+                        console.log("Power-up coletado: multiBall!");
+                        break;
+                }
                 this.applyPowerUp(powerUp);
             }
+        }
+    }
+
+    spawnExtraBall() {
+        const extraBall = {
+            x: this.x,
+            y: this.y,
+            dx: -this.dx,
+            dy: -this.dy,
+            radius: this.ballRadius,
+            active: true
+        };
+
+        if (!this.extraBalls) {
+            this.extraBalls = [];
+        }
+
+        this.extraBalls.push(extraBall);
+    }
+
+    paddleMovement() {
+        if (this.rightPressed && this.paddleX < this.canvas.width - this.paddleWidth) {
+            this.paddleX += 7;
+        } else if (this.leftPressed && this.paddleX > 0) {
+            this.paddleX -= 7;
         }
     }
 
@@ -362,6 +482,13 @@ class Game {
     restart() {
         this.initializeGameSettings();
         this.createBricks();
+        this.x = this.canvas.width / 2;
+        this.y = this.canvas.height - 30;
+        this.brickHit = 0;
+        this.paddleX = (this.canvas.width - this.paddleWidth) / 2;
+        this.rightPressed = false;
+        this.leftPressed = false;
+        this.extraBalls = [];
         this.particles = [];
         this.powerUps = [];
     }
