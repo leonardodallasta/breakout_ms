@@ -26,3 +26,12 @@ npm install && npm start
 **Illustration**
 
 ![Breakout](assets/gif/breakout.gif "Breakout")
+
+**UPDATES**
+🏱 Power-ups: Extra life, multi-balls, and extended paddle
+🧱 Dynamic brick generation with bonus blocks
+⏸ Functional pause menu
+🎧 Sound system with mute toggle
+✨ Smooth level transition
+💥 Impactful visual effects
+
