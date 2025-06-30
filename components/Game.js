@@ -7,16 +7,11 @@ class Particle {
         this.speedY = (Math.random() - 0.5) * 4;
         this.alpha = 1;
         this.decay = Math.random() * 0.02 + 0.01;
+        this.type = explosionType;
 
         if (explosionType === 'bomb') {
-        const bombColors = [
-            'rgb(255, 69, 0)',
-            'rgb(255, 140, 0)',
-            'rgb(255, 215, 0)',
-            'rgb(105, 105, 105)',
-            'rgb(255, 255, 255)'
-        ];
-        this.color = bombColors[Math.floor(Math.random() * bombColors.length)];
+            const bombColors = ['rgb(255, 69, 0)', 'rgb(255, 140, 0)', 'rgb(255, 215, 0)', 'rgb(105, 105, 105)', 'rgb(255, 255, 255)'];
+            this.color = bombColors[Math.floor(Math.random() * bombColors.length)];
         } else if (explosionType === 'spark') {
             const sparkColors = ['#FFD700', '#FFFF00', '#FFA500', '#FFFFFF'];
             this.color = sparkColors[Math.floor(Math.random() * sparkColors.length)];
@@ -24,12 +19,32 @@ class Particle {
             this.speedX = (Math.random() - 0.5) * 3;
             this.size = Math.random() * 2 + 0.5;
             this.decay = 0.05;
+        } 
+        else if (explosionType === 'powerupCascade') {
+            const magicColors = ['#a8e6cf', '#dcedc1', '#ffd3b6', '#ffaaa5', '#ff8b94'];
+            this.color = magicColors[Math.floor(Math.random() * magicColors.length)];
+            this.speedY = -Math.random() * 2.5 - 1; 
+            this.speedX = (Math.random() - 0.5) * 2;
+            this.size = Math.random() * 3 + 2;
+            this.decay = Math.random() * 0.01 + 0.015;
+            this.gravity = 0.05;
+        }
+        else if (explosionType === 'powerup') {
+            const magicColors = ['#7CFC00', '#00FFFF', '#FF00FF', '#4B0082', '#00FF7F', '#9400D3', '#ADD8E6', '#FFFFFF'];
+            this.color = magicColors[Math.floor(Math.random() * magicColors.length)];
+            this.speedX = (Math.random() - 0.5) * 6;
+            this.speedY = (Math.random() - 0.5) * 6;
+            this.size = Math.random() * 4 + 1;
+            this.decay = Math.random() * 0.015 + 0.005;
         } else {
             this.color = `hsl(${Math.floor(Math.random() * 360)}, 100%, 50%)`;
         }
     }
 
     update() {
+        if (this.type === 'powerupCascade') {
+            this.speedY += this.gravity;
+        }
         this.x += this.speedX;
         this.y += this.speedY;
         this.alpha -= this.decay;
@@ -43,6 +58,12 @@ class Particle {
         ctx.save();
         ctx.globalAlpha = this.alpha;
         ctx.fillStyle = this.color;
+
+        if (this.type === 'powerupCascade' || this.type === 'powerup') {
+            ctx.shadowColor = this.color;
+            ctx.shadowBlur = 20;
+        }
+
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fill();
@@ -50,14 +71,14 @@ class Particle {
     }
 }
 
+
 class Game {
     constructor(canvas, ctx) {
         this.canvas = canvas;
         this.ctx = ctx;
         this.drawFunctions = new Draw(this.ctx, this.canvas);
         this.powerUps = [];
-        this.paddleWidth = 100;
-        this.originalPaddleWidth = this.paddleWidth;
+        this.originalPaddleWidth = 100;
         this.paddleResizeTimeout = null;
 
         this.DEFAULT_BRICK_ROWS = 5;
@@ -80,6 +101,7 @@ class Game {
         this.powerUpSound = new Audio("assets/Audio/powerup.mp3");
 
         this.soundEnabled = true;
+        this.highscore = 0;
         this.initializeGameSettings();
         this.bricks = [];
         this.createBricks();
@@ -94,16 +116,17 @@ class Game {
         this.dx = 5;
         this.dy = -5;
         this.paddleHeight = 10;
-        this.paddleWidth = 100;
+        this.paddleWidth = this.originalPaddleWidth;
         this.paddleX = (this.canvas.width - this.paddleWidth) / 2;
         this.rightPressed = false;
         this.leftPressed = false;
         this.score = 0;
         this.lives = 3;
-        this.highscore = 0;
         this.brickHit = 0;
         this.isPaused = false;
         this.isPaddleExtended = false;
+        this.extraBalls = [];
+        this.isLevelComplete = false;
     }
 
     getBrickPosition(c, r) {
@@ -113,8 +136,7 @@ class Game {
     }
 
     createBricks() {
-        const MAX_RANDOM_ROW = this.DEFAULT_BRICK_ROWS;
-
+        this.bricks = [];
         for (let c = 0; c < this.brickSettings.columnCount; c++) {
             this.bricks[c] = [];
             for (let r = 0; r < this.brickSettings.rowCount; r++) {
@@ -124,16 +146,18 @@ class Game {
         }
 
         for (let c = 0; c < this.brickSettings.columnCount; c++) {
-            const randomRow = Math.floor(Math.random() * MAX_RANDOM_ROW);
-            this.bricks[c][randomRow].isBonus = 1;
+            const randomRow = Math.floor(Math.random() * this.brickSettings.rowCount);
+            if (this.bricks[c][randomRow]) {
+                this.bricks[c][randomRow].isBonus = 1;
+            }
         }
     }
 
     isBallCollidingWithBrick(brick) {
         return this.x > brick.x &&
-               this.x < brick.x + this.brickSettings.width &&
-               this.y > brick.y &&
-               this.y < brick.y + this.brickSettings.height;
+            this.x < brick.x + this.brickSettings.width &&
+            this.y > brick.y &&
+            this.y < brick.y + this.brickSettings.height;
     }
 
     setControls(rightPressed, leftPressed) {
@@ -148,6 +172,14 @@ class Game {
     draw() {
         if (this.isPaused) {
             this.drawFunctions.drawText("Game Paused", this.canvas.width / 2 - 50, this.canvas.height / 2);
+            requestAnimationFrame(() => this.draw());
+            return;
+        }
+
+        if (this.isLevelComplete) {
+            this.drawFunctions.clearCanvas();
+            this.drawFunctions.drawText(`Level ${this.level - 1} Complete!`, this.canvas.width / 2 - 80, this.canvas.height / 2);
+            requestAnimationFrame(() => this.draw());
             return;
         }
 
@@ -178,25 +210,21 @@ class Game {
         for (const powerUp of this.powerUps) {
             powerUp.draw(this.ctx);
             powerUp.move();
-
             if (powerUp.y > this.canvas.height) {
                 powerUp.active = false;
             }
         }
-    
         this.powerUps = this.powerUps.filter(p => p.active);
-    }    
+    }
 
     moveExtraBalls() {
-        if (!this.extraBalls) return;
-    
         for (const ball of this.extraBalls) {
             if (!ball.active) continue;
-    
+
             if (ball.x + ball.dx > this.canvas.width - ball.radius || ball.x + ball.dx < ball.radius) {
                 ball.dx = -ball.dx;
             }
-    
+
             if (ball.y + ball.dy < ball.radius) {
                 ball.dy = -ball.dy;
             } else if (ball.y + ball.dy > this.canvas.height - ball.radius) {
@@ -204,50 +232,36 @@ class Game {
                     ball.dy = -ball.dy;
                 } else {
                     ball.active = false;
-                    continue;
                 }
             }
-
+            
             ball.x += ball.dx;
             ball.y += ball.dy;
-  
+
             this.drawFunctions.drawBall(ball.x, ball.y, ball.radius);
-   
+
             for (let c = 0; c < this.brickSettings.columnCount; c++) {
                 for (let r = 0; r < this.brickSettings.rowCount; r++) {
                     const b = this.bricks[c][r];
                     if (b.status !== 1) continue;
-                    if (
-                        ball.x > b.x &&
-                        ball.x < b.x + this.brickSettings.width &&
-                        ball.y > b.y &&
-                        ball.y < b.y + this.brickSettings.height
-                    ) {
+                    if (ball.x > b.x && ball.x < b.x + this.brickSettings.width && ball.y > b.y && ball.y < b.y + this.brickSettings.height) {
                         b.status = 0;
                         this.brickHit++;
                         this.playSound(this.hitSound);
                         ball.dy = -ball.dy;
-    
-                        if (b.isBonus === 1) {
-                            const types = ["paddleSize", "extraLife", "multiBall"];
-                            const randomType = types[Math.floor(Math.random() * types.length)];
-                            const powerUp = new PowerUp(ball.x, ball.y, randomType);
-                            this.powerUps.push(powerUp);
-                        }
-    
-                        this.score += b.isBonus ? 5 : 1;
+                        this.score++;
                         if (this.score > this.highscore) this.highscore = this.score;
+                        if (this.brickHit === this.brickSettings.rowCount * this.brickSettings.columnCount) {
+                            this.winLevel();
+                        }
                     }
                 }
             }
         }
-    
         this.extraBalls = this.extraBalls.filter(b => b.active);
-    }    
+    }
 
     collisionDetection() {
-        const totalBricks = this.brickSettings.rowCount * this.brickSettings.columnCount;
-
         for (let c = 0; c < this.brickSettings.columnCount; c++) {
             for (let r = 0; r < this.brickSettings.rowCount; r++) {
                 const b = this.bricks[c][r];
@@ -258,40 +272,44 @@ class Game {
                 this.dy = -this.dy;
                 b.status = 0;
 
-               const centerX = b.x + this.brickSettings.width / 2;
-               const centerY = b.y + this.brickSettings.height / 2;
-               const explosionType = Math.random() < 0.5 ? 'bomb' : 'random';
-               for (let i = 0; i < 20; i++) {
-                this.particles.push(new Particle(centerX, centerY, explosionType));
-               }
-
+                const centerX = b.x + this.brickSettings.width / 2;
+                const centerY = b.y + this.brickSettings.height / 2;
+                const explosionType = Math.random() < 0.5 ? 'bomb' : 'random';
+                for (let i = 0; i < 20; i++) {
+                    this.particles.push(new Particle(centerX, centerY, explosionType));
+                }
 
                 if (b.isBonus === 1) {
                     const types = ["paddleSize", "extraLife", "multiBall"];
                     const randomType = types[Math.floor(Math.random() * types.length)];
-                    const powerUp = new PowerUp(this.x, this.y, randomType);
-
-                    this.powerUps.push(powerUp);
-                }                
+                    this.powerUps.push(new PowerUp(this.x, this.y, randomType));
+                }
 
                 this.score += b.isBonus ? 5 : 1;
                 if (this.score > this.highscore) this.highscore = this.score;
 
-                if (this.brickHit === totalBricks) {
-                    this.playSound(this.winSound);
-                    this.level++;
-                    this.dx += 1;
-                    this.dy -= 1;
-                    this.brickSettings.columnCount++;
-                    setTimeout(() => {
-                        alert("YOU WIN, CONGRATS!");
-                        this.paddleWidth -= 15;
-                        this.restart();
-                    });
+                if (this.brickHit === this.brickSettings.rowCount * this.brickSettings.columnCount) {
+                    this.winLevel();
                     return;
                 }
             }
         }
+    }
+    
+    winLevel() {
+        this.playSound(this.winSound);
+        this.level++;
+        this.isLevelComplete = true;
+        
+        if (this.brickSettings.columnCount < 10) {
+            this.brickSettings.columnCount++;
+        }
+        
+        setTimeout(() => {
+            if (this.paddleWidth > 50) this.paddleWidth -= 15;
+            this.isLevelComplete = false;
+            this.resetForNextLevel();
+        }, 2000);
     }
 
     updateParticles() {
@@ -306,15 +324,11 @@ class Game {
     playSound(sound) {
         if (!this.soundEnabled) return;
         sound.currentTime = 0;
-        sound.play();
+        sound.play().catch(error => console.log("Erro ao tocar som:", error));
     }
 
-    toggleSound() {
-        this.soundEnabled = !this.soundEnabled;
-    }
-
-    setSoundEnabled(enabled) {
-        this.soundEnabled = enabled;
+    togglePause() {
+        this.isPaused = !this.isPaused;
     }
 
     moveBall() {
@@ -337,34 +351,23 @@ class Game {
     resetBallPosition() {
         this.x = this.canvas.width / 2;
         this.y = this.canvas.height - 30;
-        this.dx = 5;
-        this.dy = -5;
+        this.dx = 5 + (this.level - 1);
+        this.dy = -5 - (this.level - 1);
         this.paddleX = (this.canvas.width - this.paddleWidth) / 2;
-    }    
+    }
 
     handleBallBottomCollision() {
-        if (!this.isPaddleExtended) {
-            this.paddleWidth = this.originalPaddleWidth;
-        }
-        
         if (this.x > this.paddleX && this.x < this.paddleX + this.paddleWidth) {
             this.bounceBallOffPaddle();
         } else {
             this.lives--;
             if (!this.lives) {
-                this.loseSound.play();
-                setTimeout(() => {
-                    alert("GAME OVER");
-                    this.dx = 5;
-                    this.dy = -5;
-                    this.score = 0;
-                    this.lives = 3;
-                    this.level = 1;
-                    this.paddleWidth = this.originalPaddleWidth;
-                    this.restart();
-                }, 0);
+                this.playSound(this.loseSound);
+                alert("GAME OVER");
+                this.highscore = Math.max(this.score, this.highscore);
+                this.restart();
             } else {
-                this.fallSound.play();
+                this.playSound(this.fallSound);
                 this.resetBallPosition();
             }
         }
@@ -374,18 +377,15 @@ class Game {
         this.dy = -this.dy;
         const ballOffset = this.x - this.paddleX;
         const paddleCenter = this.paddleWidth / 2;
-        const relativePosition = (ballOffset - paddleCenter) / this.paddleWidth;
-        let angleChange = relativePosition * Math.PI / 3;
-        const speed = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
-        this.dx = Math.sin(angleChange) * speed;
-        this.dy = -Math.cos(angleChange) * speed;
+        const relativePosition = (ballOffset - paddleCenter) / paddleCenter;
+        this.dx = relativePosition * 5;
+
         this.playSound(this.hitSound);
-        
+
         for (let i = 0; i < 10; i++) {
             this.particles.push(new Particle(this.x, this.canvas.height - this.paddleHeight - 5, 'spark'));
         }
     }
-
 
     paddleMovement() {
         if (this.rightPressed && this.paddleX < this.canvas.width - this.paddleWidth) {
@@ -396,51 +396,49 @@ class Game {
     }
 
     applyPaddleSizePowerUp() {
-        this.paddleWidth += 30;
-    
-        if (this.paddleWidth > this.canvas.width * 0.9) {
-            this.paddleWidth = this.canvas.width * 0.9;
+        this.paddleWidth += 40;
+        if (this.paddleWidth > this.canvas.width * 0.8) {
+            this.paddleWidth = this.canvas.width * 0.8;
         }
-    
         this.isPaddleExtended = true;
-    
+
         if (this.paddleResizeTimeout) {
             clearTimeout(this.paddleResizeTimeout);
         }
-    
+
         this.paddleResizeTimeout = setTimeout(() => {
             this.paddleWidth = this.originalPaddleWidth;
             this.isPaddleExtended = false;
-            console.log("Barra voltou ao tamanho original.");
-        }, 5000);
-    
-        console.log("Power-up coletado: paddleSize (barra aumentada por 5s)");
+        }, 10000);
     }
-    
+
     checkPowerUpCollision() {
         for (const powerUp of this.powerUps) {
-            if (
+            if (powerUp.active &&
                 powerUp.y + powerUp.height > this.canvas.height - this.paddleHeight &&
                 powerUp.x > this.paddleX &&
                 powerUp.x < this.paddleX + this.paddleWidth
             ) {
                 powerUp.active = false;
-                this.powerUpSound.currentTime = 0;
-                this.powerUpSound.play();
+                this.playSound(this.powerUpSound);
+
+                const paddleTopY = this.canvas.height - this.paddleHeight;
+                for (let i = 0; i < 40; i++) {
+                    const particleX = this.paddleX + Math.random() * this.paddleWidth;
+                    this.particles.push(new Particle(particleX, paddleTopY, 'powerupCascade'));
+                }
+
                 switch (powerUp.type) {
                     case "paddleSize":
                         this.applyPaddleSizePowerUp();
                         break;
                     case "extraLife":
                         this.lives++;
-                        console.log("Power-up coletado: +1 vida!");
                         break;
                     case "multiBall":
                         this.spawnExtraBall();
-                        console.log("Power-up coletado: multiBall!");
                         break;
                 }
-                this.applyPowerUp(powerUp);
             }
         }
     }
@@ -450,65 +448,25 @@ class Game {
             x: this.x,
             y: this.y,
             dx: -this.dx,
-            dy: -this.dy,
+            dy: this.dy,
             radius: this.ballRadius,
             active: true
         };
-
-        if (!this.extraBalls) {
-            this.extraBalls = [];
-        }
-
         this.extraBalls.push(extraBall);
-    }
-
-    paddleMovement() {
-        if (this.rightPressed && this.paddleX < this.canvas.width - this.paddleWidth) {
-            this.paddleX += 7;
-        } else if (this.leftPressed && this.paddleX > 0) {
-            this.paddleX -= 7;
-        }
-    }
-
-    applyPowerUp(powerUp) {
-        this.playSound(this.powerUpSound);
-
-        switch (powerUp.type) {
-            case "paddleSize":
-                this.paddleWidth += 40;
-                clearTimeout(this.paddleResizeTimeout);
-                this.paddleResizeTimeout = setTimeout(() => {
-                    this.paddleWidth = this.originalPaddleWidth;
-                }, 10000);
-                break;
-            case "extraLife":
-                this.lives++;
-                break;
-            case "multiBall":
-                break;
-            default:
-                break;
-        }
     }
 
     restart() {
         this.initializeGameSettings();
+        this.brickSettings.columnCount = this.DEFAULT_BRICK_COLUMNS;
         this.createBricks();
-        this.x = this.canvas.width / 2;
-        this.y = this.canvas.height - 30;
+    }
+
+    resetForNextLevel() {
         this.brickHit = 0;
-        this.paddleX = (this.canvas.width - this.paddleWidth) / 2;
-        this.rightPressed = false;
-        this.leftPressed = false;
+        this.createBricks();
+        this.resetBallPosition();
         this.extraBalls = [];
         this.particles = [];
         this.powerUps = [];
-    }
-
-    togglePause() {
-        this.isPaused = !this.isPaused;
-        if (!this.isPaused) {
-            this.draw();
-        }
     }
 }
