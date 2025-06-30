@@ -9,14 +9,21 @@ class Particle {
         this.decay = Math.random() * 0.02 + 0.01;
 
         if (explosionType === 'bomb') {
-            const bombColors = [
-                'rgb(255, 69, 0)',
-                'rgb(255, 140, 0)',
-                'rgb(255, 215, 0)',
-                'rgb(105, 105, 105)',
-                'rgb(255, 255, 255)'
-            ];
-            this.color = bombColors[Math.floor(Math.random() * bombColors.length)];
+        const bombColors = [
+            'rgb(255, 69, 0)',
+            'rgb(255, 140, 0)',
+            'rgb(255, 215, 0)',
+            'rgb(105, 105, 105)',
+            'rgb(255, 255, 255)'
+        ];
+        this.color = bombColors[Math.floor(Math.random() * bombColors.length)];
+        } else if (explosionType === 'spark') {
+            const sparkColors = ['#FFD700', '#FFFF00', '#FFA500', '#FFFFFF'];
+            this.color = sparkColors[Math.floor(Math.random() * sparkColors.length)];
+            this.speedY = -Math.random() * 2 - 1;
+            this.speedX = (Math.random() - 0.5) * 3;
+            this.size = Math.random() * 2 + 0.5;
+            this.decay = 0.05;
         } else {
             this.color = `hsl(${Math.floor(Math.random() * 360)}, 100%, 50%)`;
         }
@@ -361,7 +368,7 @@ class Game {
                 this.resetBallPosition();
             }
         }
-    }    
+    }
 
     bounceBallOffPaddle() {
         this.dy = -this.dy;
@@ -373,7 +380,12 @@ class Game {
         this.dx = Math.sin(angleChange) * speed;
         this.dy = -Math.cos(angleChange) * speed;
         this.playSound(this.hitSound);
+        
+        for (let i = 0; i < 10; i++) {
+            this.particles.push(new Particle(this.x, this.canvas.height - this.paddleHeight - 5, 'spark'));
+        }
     }
+
 
     paddleMovement() {
         if (this.rightPressed && this.paddleX < this.canvas.width - this.paddleWidth) {
