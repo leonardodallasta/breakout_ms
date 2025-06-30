@@ -13,15 +13,14 @@ class PowerUp {
 
     draw(ctx) {
         if (!this.active) return;
-
+        ctx.save();
         ctx.fillStyle = this.getColor();
         ctx.fillRect(this.x - 12, this.y - 12, 24, 24);
-
         ctx.strokeStyle = "#003366";
         ctx.lineWidth = 2;
         ctx.strokeRect(this.x - 12, this.y - 12, 24, 24);
-
         this.drawSymbol(ctx);
+        ctx.restore();
     }
 
     drawSymbol(ctx) {

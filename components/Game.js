@@ -90,7 +90,7 @@ class Game {
             width: 75,
             height: 20,
             padding: 10,
-            offsetTop: 30,
+            offsetTop: 50,
             offsetLeft: 30,
         };
 
@@ -147,7 +147,7 @@ class Game {
 
         for (let c = 0; c < this.brickSettings.columnCount; c++) {
             const randomRow = Math.floor(Math.random() * this.brickSettings.rowCount);
-            if (this.bricks[c][randomRow]) {
+            if (this.bricks[c] && this.bricks[c][randomRow]) {
                 this.bricks[c][randomRow].isBonus = 1;
             }
         }
@@ -171,26 +171,23 @@ class Game {
 
     draw() {
         if (this.isPaused) {
-            this.drawFunctions.drawText("Game Paused", this.canvas.width / 2 - 50, this.canvas.height / 2);
-            requestAnimationFrame(() => this.draw());
-            return;
-        }
-
-        if (this.isLevelComplete) {
+        } else if (this.isLevelComplete) {
             this.drawFunctions.clearCanvas();
-            this.drawFunctions.drawText(`Level ${this.level - 1} Complete!`, this.canvas.width / 2 - 80, this.canvas.height / 2);
-            requestAnimationFrame(() => this.draw());
-            return;
+            this.ctx.save();
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.drawFunctions.drawText(`Level ${this.level - 1} Complete!`, this.canvas.width / 2, this.canvas.height / 2);
+            this.ctx.restore();
+        } else {
+            this.drawScene();
+            this.drawPowerUps();
+            this.collisionDetection();
+            this.checkPowerUpCollision();
+            this.moveBall();
+            this.moveExtraBalls();
+            this.updateParticles();
+            this.drawParticles();
         }
-
-        this.drawScene();
-        this.drawPowerUps();
-        this.collisionDetection();
-        this.checkPowerUpCollision();
-        this.moveBall();
-        this.moveExtraBalls();
-        this.updateParticles();
-        this.drawParticles();
 
         requestAnimationFrame(() => this.draw());
     }
@@ -200,10 +197,22 @@ class Game {
         this.drawFunctions.drawBricks(this.bricks, this.brickSettings);
         this.drawFunctions.drawBall(this.x, this.y, this.ballRadius);
         this.drawFunctions.drawPaddle(this.paddleX, this.paddleWidth, this.paddleHeight);
-        this.drawFunctions.drawText("Score: " + this.score, 8, 20);
-        this.drawFunctions.drawText("High Score: " + this.highscore, this.canvas.width / 2 - 90, 20);
-        this.drawFunctions.drawText("Lives: " + this.lives, this.canvas.width / 2 + 80, 20);
-        this.drawFunctions.drawText("Level: " + this.level, this.canvas.width - 65, 20);
+
+        this.ctx.save();
+        this.ctx.font = "16px Arial";
+        this.ctx.fillStyle = "#0095DD";
+        this.ctx.textBaseline = 'top';
+
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText("Score: " + this.score, 8, 10);
+
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText("High Score: " + this.highscore, this.canvas.width / 2, 10);
+
+        this.ctx.textAlign = 'right';
+        this.ctx.fillText("Level: " + this.level, this.canvas.width - 8, 10);
+        this.ctx.fillText("Lives: " + this.lives, this.canvas.width - 8, 30);
+        this.ctx.restore();
     }
 
     drawPowerUps() {
@@ -325,6 +334,10 @@ class Game {
         if (!this.soundEnabled) return;
         sound.currentTime = 0;
         sound.play().catch(error => console.log("Erro ao tocar som:", error));
+    }
+
+    toggleSound() {
+        this.soundEnabled = !this.soundEnabled;
     }
 
     togglePause() {
